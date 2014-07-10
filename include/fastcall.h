@@ -8,6 +8,7 @@
 namespace Php {
 
     Value eval(const std::string &phpCode);
+    bool class_exists(const std::string &classname, bool autoload = true);
 
 }
 
