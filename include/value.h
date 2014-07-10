@@ -1042,6 +1042,26 @@ public:
         return isImpl(classname, allow_string, true);
     }
 
+    /**
+     *  Return a hash value for unordered_map.
+     *  @return size_t
+     */
+    size_t hash() const;
+
+    /**
+     *  Return the class name of the object.
+     *  Return empty string when the value is not an object.
+     *  @return std::string
+     */
+    std::string className() const;
+
+    /**
+     *  Return an id of the object. (It is like spl_object_hash)
+     *  Return empty string when the value is not an object.
+     *  @return std::string
+     */
+    std::string id() const;
+
 private:
 
     bool isImpl(const std::string &classname, bool allow_string, bool only_subclass) const;
