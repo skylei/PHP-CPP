@@ -528,6 +528,13 @@ public:
     std::vector<Php::Value> keys() const;
     
     /**
+     *  Get object property names.
+     *  @param only_public
+     *  @return std::vector
+     */
+    std::vector<std::string> properties(bool only_public = true) const;
+    
+    /**
      *  Define the iterator type
      */
     typedef ValueIterator iterator;
