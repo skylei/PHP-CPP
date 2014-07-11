@@ -1875,7 +1875,7 @@ std::vector<std::string> Value::properties(bool only_public) const {
 ValueIterator Value::createIterator(bool begin) const
 {
     // check type
-    if (isArray()) return ValueIterator(new HashIterator(Z_ARRVAL_P(_val), begin));
+    if (isArray()) return ValueIterator(new HashIterator(Z_ARRVAL_P(_val), begin, true));
     
     // get access to the hast table
     if (isObject()) 
@@ -1896,7 +1896,7 @@ ValueIterator Value::createIterator(bool begin) const
         else
         {
             // construct a regular iterator
-            return ValueIterator(new HashIterator(Z_OBJ_HT_P(_val)->get_properties(_val TSRMLS_CC), begin));
+            return ValueIterator(new HashIterator(Z_OBJPROP_P(_val), begin));
         }
     }
     
