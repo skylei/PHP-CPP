@@ -48,7 +48,7 @@ namespace Php {
 
 
         if (autoload) {
-            char lc_name[len + 1];
+            char *lc_name = new char[len + 1];
             zend_str_tolower_copy(lc_name, str, len);
 
             char *name = lc_name;
@@ -58,6 +58,7 @@ namespace Php {
             }
 
             found = zend_hash_find(EG(class_table), name, len + 1, (void **) &ce);
+            delete [] lc_name;
             return (found == SUCCESS && !(((*ce)->ce_flags & (ZEND_ACC_INTERFACE | ZEND_ACC_TRAIT)) > ZEND_ACC_EXPLICIT_ABSTRACT_CLASS));
         }
 
