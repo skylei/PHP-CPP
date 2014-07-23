@@ -21,7 +21,8 @@
 #include <exception>
 #include <type_traits>
 #include <algorithm>
- 
+#include <functional>
+
 // for debug
 #include <iostream>
 
