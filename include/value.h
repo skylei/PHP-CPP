@@ -100,7 +100,7 @@ public:
      *  @param  value
      */
     template <typename T>
-    Value(const std::map<std::string,T> &value)
+    Value(const std::map<std::string,T> &value) : Value(Type::Array)
     {
         // set all elements
         for (auto &iter : value) setRaw(iter.first.c_str(), iter.first.size(), iter.second);
@@ -502,6 +502,9 @@ public:
         
         // result variable
         std::map<std::string,T> result;
+
+        // loop through the original map, and copy everything to the result
+        for (auto &iter : map) result[iter.first] = iter.second;
         
         // done
         return result;
@@ -964,6 +967,37 @@ public:
         // try casting it
         return dynamic_cast<T*>(base);
     }
+    
+    /**
+     *  Check whether this object is an instance of a certain class
+     * 
+     *  If you set the parameter 'allowString' to true, and the Value object
+     *  holds a string, the string will be treated as class name.
+     * 
+     *  @param  classname   The class of which this should be an instance
+     *  @param  size        Length of the classname string
+     *  @param  allowString Is it allowed for 'this' to be a string
+     *  @return bool
+     */
+    bool instanceOf(const char *classname, size_t size, bool allowString = false) const;
+    bool instanceOf(const char *classname, bool allowString = false) const { return instanceOf(classname, strlen(classname), allowString); }
+    bool instanceOf(const std::string &classname, bool allowString = false) const { return instanceOf(classname.c_str(), classname.size(), allowString); }
+
+    /**
+     *  Check whether this object is derived from a certain class.
+     * 
+     *  If you set the parameter 'allowString' to true, and the Value object
+     *  holds a string, the string will be treated as class name.
+     * 
+     *  @param  classname   The class of which this should be an instance
+     *  @param  size        Length of the classname string
+     *  @param  allowString Is it allowed for 'this' to be a string
+     *  @return bool
+     */
+    bool derivedFrom(const char *classname, size_t size, bool allowString = false) const;
+    bool derivedFrom(const char *classname, bool allowString = false) const { return derivedFrom(classname, strlen(classname), allowString); }
+    bool derivedFrom(const std::string &classname, bool allowString = false) const { return derivedFrom(classname.c_str(), classname.size(), allowString); }
+
 
 private:
     /**
@@ -1047,6 +1081,13 @@ protected:
      *  @return iterator
      */
     iterator createIterator(bool begin) const;
+    
+    /**
+     *  Retrieve the class entry
+     *  @param  allowString Allow the 'this' object to be a string
+     *  @return zend_class_entry
+     */
+    struct _zend_class_entry *classEntry(bool allowString = true) const;
     
     /**
      *  The Globals and Member classes can access the zval directly

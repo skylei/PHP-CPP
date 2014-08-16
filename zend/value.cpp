@@ -1409,6 +1409,104 @@ bool Value::isCallable() const
 }
 
 /**
+ *  Retrieve the class entry
+ *  @param  allowString
+ *  @return zend_class_entry
+ */
+zend_class_entry *Value::classEntry(bool allowString) const
+{
+    // we need the tsrm_ls variable
+    TSRMLS_FETCH();
+
+    // is this an object
+    if (isObject())
+    {
+        // should have a class entry
+        if (!HAS_CLASS_ENTRY(*_val)) return nullptr;
+        
+        // class entry can be easily found
+        return Z_OBJCE_P(_val);
+    }
+    else
+    {
+        // the value is not an object, is this allowed?
+        if (!allowString || !isString()) return nullptr;
+        
+        // temporary variable
+        zend_class_entry **ce;
+        
+        // find the class entry
+        if (zend_lookup_class(Z_STRVAL_P(_val), Z_STRLEN_P(_val), &ce TSRMLS_CC) == FAILURE) return nullptr;
+    
+        // found the entry
+        return *ce;
+    }
+}
+
+/**
+ *  Check whether this object is an instance of a certain class
+ * 
+ *  If you set the parameter 'allowString' to true, and the Value object
+ *  holds a string, the string will be treated as class name.
+ * 
+ *  @param  classname   The class of which this should be an instance
+ *  @param  size        Length of the classname string
+ *  @param  allowString Is it allowed for 'this' to be a string
+ *  @return bool
+ */
+bool Value::instanceOf(const char *classname, size_t size, bool allowString) const 
+{
+    // we need the tsrm_ls variable
+    TSRMLS_FETCH();
+
+    // the class-entry of 'this'
+    zend_class_entry *this_ce = classEntry(allowString);
+    if (!this_ce) return false;
+    
+    // class entry of the parameter
+    zend_class_entry **ce;
+    
+    // now we can look up the actual class
+    if (zend_lookup_class_ex(classname, size, NULL, 0, &ce TSRMLS_CC) == FAILURE) return false;
+    
+    // check if this is a subclass
+    return instanceof_function(this_ce, *ce TSRMLS_CC);
+}
+
+/**
+ *  Check whether this object is derived from a certain class
+ * 
+ *  If you set the parameter 'allowString' to true, and the Value object
+ *  holds a string, the string will be treated as class name.
+ * 
+ *  @param  classname   The class of which this should be an instance
+ *  @param  size        Length of the classname string
+ *  @param  allowString Is it allowed for 'this' to be a string
+ *  @return bool
+ */
+bool Value::derivedFrom(const char *classname, size_t size, bool allowString) const 
+{
+    // we need the tsrm_ls variable
+    TSRMLS_FETCH();
+
+    // the class-entry of 'this'
+    zend_class_entry *this_ce = classEntry(allowString);
+    if (!this_ce) return false;
+    
+    // class entry of the parameter
+    zend_class_entry **ce;
+    
+    // now we can look up the actual class
+    if (zend_lookup_class_ex(classname, size, NULL, 0, &ce TSRMLS_CC) == FAILURE) return false;
+    
+    // should not be identical, it must be a real derived object
+    if (this_ce == *ce) return false;
+    
+    // check if this is a subclass
+    return instanceof_function(this_ce, *ce TSRMLS_CC);
+}
+
+/**
  *  Make a clone of the type
  *  @return Value
  */
@@ -1612,7 +1710,12 @@ std::map<std::string,Php::Value> Value::mapValue() const
     std::map<std::string,Php::Value> result;
     
     // iterate over the object
-    for (auto &iter : *this) result[iter.first.rawValue()] = iter.second;
+    for (auto &iter : *this)
+    {
+        auto &key = iter.first;
+        if (key.isNumeric()) result[std::to_string(key.numericValue())] = iter.second;
+        else result[iter.first.rawValue()] = iter.second;
+    }
     
     // done
     return result;
