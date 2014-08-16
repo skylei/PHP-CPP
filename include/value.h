@@ -537,6 +537,7 @@ public:
         // result variable
         std::map<std::string,T> result;
 
+        // loop through the original map, and copy everything to the result
         for (auto &iter : map) result[iter.first] = iter.second;
         
         // done
@@ -1022,25 +1023,36 @@ public:
         // try casting it
         return dynamic_cast<T*>(base);
     }
-
+    
     /**
-     *  Checks if this object is of the class or has the class as one of its parents
-     *  @param classname
-     *  @param allow_string
+     *  Check whether this object is an instance of a certain class
+     * 
+     *  If you set the parameter 'allowString' to true, and the Value object
+     *  holds a string, the string will be treated as class name.
+     * 
+     *  @param  classname   The class of which this should be an instance
+     *  @param  size        Length of the classname string
+     *  @param  allowString Is it allowed for 'this' to be a string
      *  @return bool
      */
-    inline bool is(const std::string &classname, bool allow_string=false) const {
-        return isImpl(classname, allow_string, false);
-    }
+    bool instanceOf(const char *classname, size_t size, bool allowString = false) const;
+    bool instanceOf(const char *classname, bool allowString = false) const { return instanceOf(classname, strlen(classname), allowString); }
+    bool instanceOf(const std::string &classname, bool allowString = false) const { return instanceOf(classname.c_str(), classname.size(), allowString); }
 
     /**
-     *  Checks if this object has the class as one of its parents
-     *  @param classname
+     *  Check whether this object is derived from a certain class.
+     * 
+     *  If you set the parameter 'allowString' to true, and the Value object
+     *  holds a string, the string will be treated as class name.
+     * 
+     *  @param  classname   The class of which this should be an instance
+     *  @param  size        Length of the classname string
+     *  @param  allowString Is it allowed for 'this' to be a string
      *  @return bool
      */
-    inline bool isSubClassOf(const std::string &classname, bool allow_string=true) const {
-        return isImpl(classname, allow_string, true);
-    }
+    bool derivedFrom(const char *classname, size_t size, bool allowString = false) const;
+    bool derivedFrom(const char *classname, bool allowString = false) const { return derivedFrom(classname, strlen(classname), allowString); }
+    bool derivedFrom(const std::string &classname, bool allowString = false) const { return derivedFrom(classname.c_str(), classname.size(), allowString); }
 
     /**
      *  Return a hash value for unordered_map.
@@ -1063,8 +1075,6 @@ public:
     std::string id() const;
 
 private:
-
-    bool isImpl(const std::string &classname, bool allow_string, bool only_subclass) const;
     /**
      *  Call function with a number of parameters
      *  @param  argc        Number of parameters
@@ -1146,6 +1156,13 @@ protected:
      *  @return iterator
      */
     iterator createIterator(bool begin) const;
+    
+    /**
+     *  Retrieve the class entry
+     *  @param  allowString Allow the 'this' object to be a string
+     *  @return zend_class_entry
+     */
+    struct _zend_class_entry *classEntry(bool allowString = true) const;
     
     /**
      *  The Globals and Member classes can access the zval directly
