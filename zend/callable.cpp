@@ -107,17 +107,20 @@ void Callable::invoke_return_ref(INTERNAL_FUNCTION_PARAMETERS)
             // get the result
             Value result(callable->invoke(params));
 
+            // detach the zval (we don't want it to be destructed)
+            zval *val = result.detach();
+
             // add one more reference
-            Z_ADDREF_P(result._val);
+            Z_ADDREF_P(val);
 
             // get the reference of the result
-            SEPARATE_ZVAL_TO_MAKE_IS_REF(&result._val);
+            SEPARATE_ZVAL_TO_MAKE_IS_REF(&val);
 
             // destroy the old return value
             zval_ptr_dtor(return_value_ptr);
 
             // return the reference
-            *return_value_ptr = result._val;
+            *return_value_ptr = val;
         }
         catch (Exception &exception)
         {
