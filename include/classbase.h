@@ -85,7 +85,7 @@ public:
      *  Move constructor
      *  @param  that
      */
-    ClassBase(ClassBase &&that) : _impl(std::move(that._impl)) {}
+    ClassBase(ClassBase &&that) _NOEXCEPT : _impl(std::move(that._impl)) {}
 
     /**
      *  Destructor
@@ -276,6 +276,12 @@ private:
      *  @var    std::shared_ptr<ClassImpl>
      */
     std::shared_ptr<ClassImpl> _impl;
+    
+    /**
+     *  Constants can be used as class properties, and need access to private
+     *  and protected methods
+     */
+    friend class ConstantImpl;
 };
     
 /**

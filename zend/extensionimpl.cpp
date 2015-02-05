@@ -140,7 +140,7 @@ int ExtensionImpl::processStartup(int type, int module_number TSRMLS_DC)
     zend_register_ini_entries(entries, module_number TSRMLS_CC);
 
     // initialize the extension
-    extension->initialize(TSRMLS_C);
+    extension->initialize(module_number TSRMLS_CC);
     
     // remember that we're initialized (when you use "apache reload" it is 
     // possible that the processStartup() method is called more than once)
@@ -220,12 +220,34 @@ int ExtensionImpl::processIdle(int type, int module_number TSRMLS_DC)
 }
 
 /**
+ *  Function that is called when the PHP engine initializes with a different PHP-CPP
+ *  version for the libphpcpp.so file than the version the extension was compiled for
+ *  @param  type        Module type
+ *  @param  number      Module number
+ *  @param  tsrm_ls
+ *  @return int         0 on success
+ */
+int ExtensionImpl::processMismatch(int type, int module_number TSRMLS_DC)
+{
+    // get the extension
+    auto *extension = find(module_number TSRMLS_CC);
+    
+    // report a warning
+    warning << "Version mismatch between PHP-CPP and extension " << extension->name() << " " << extension->version() << " (recompile needed?)" << std::endl;
+    
+    // done
+    return BOOL2SUCCESS(true);
+}
+
+/**
  *  Constructor
  *  @param  data        Pointer to the extension object created by the extension programmer
  *  @param  name        Name of the extension
  *  @param  version     Version number
+ *  @param  apiversion  API version number
  */
-ExtensionImpl::ExtensionImpl(Extension *data, const char *name, const char *version) : ExtensionBase(data)
+ExtensionImpl::ExtensionImpl(Extension *data, const char *name, const char *version, int apiversion) : 
+    ExtensionBase(data)
 {
     // keep extension pointer based on the name
     name2extension[name] = this;
@@ -262,6 +284,17 @@ ExtensionImpl::ExtensionImpl(Extension *data, const char *name, const char *vers
     _entry.globals_ptr = NULL;
 #endif
 
+    // everything is ok if the api versions match
+    if (apiversion == PHPCPP_API_VERSION) return;
+    
+    // mismatch between api versions, the extension is invalid, we use a 
+    // different startup function to report to the user
+    _entry.module_startup_func = &ExtensionImpl::processMismatch;
+
+    // the other callback functions are no longer necessary
+    _entry.module_shutdown_func = nullptr;
+    _entry.request_startup_func = nullptr;
+    _entry.request_shutdown_func = nullptr;
 }
 
 /**
@@ -277,6 +310,26 @@ ExtensionImpl::~ExtensionImpl()
 }
 
 /**
+ *  The extension name
+ *  @return const char *
+ */
+const char *ExtensionImpl::name() const
+{
+    // name is stored in the struct
+    return _entry.name;
+}
+
+/**
+ *  The extension version
+ *  @return const char *
+ */
+const char *ExtensionImpl::version() const
+{
+    // version is stored in the struct
+    return _entry.version;
+}
+
+/**
  *  Retrieve the module entry
  *  @return zend_module_entry
  */
@@ -284,6 +337,10 @@ zend_module_entry *ExtensionImpl::module()
 {
     // check if functions were already defined
     if (_entry.functions) return &_entry;
+
+    // if the 'processMismatch' function is installed, the API version is wrong,
+    // and nothing should be initialized
+    if (_entry.module_startup_func == &ExtensionImpl::processMismatch) return &_entry;
 
     // the number of functions
     int count = _data->functions();
@@ -298,7 +355,7 @@ zend_module_entry *ExtensionImpl::module()
     int i = 0;
 
     // apply a function to each function
-    _data->functions([&i, entries](const std::string &prefix, Function &function) {
+    _data->functions([&i, entries](const std::string &prefix, NativeFunction &function) {
         
         // initialize the function
         function.initialize(prefix, &entries[i]);
@@ -322,11 +379,19 @@ zend_module_entry *ExtensionImpl::module()
 
 /**
  *  Initialize the extension after it was started
+ *  @param  module_number
  *  @param  tsrm_ls
  */
-void ExtensionImpl::initialize(TSRMLS_D)
+void ExtensionImpl::initialize(int module_number TSRMLS_DC)
 {
-    // we need to register each class, find out all classes
+    // the constants are registered after the module is ready
+    _data->constants([module_number TSRMLS_CC](const std::string &prefix, Constant &c) {
+        
+        // forward to implementation class
+        c.implementation()->initialize(prefix, module_number TSRMLS_CC);
+    });
+    
+    // we also need to register each class, find out all classes
     _data->classes([TSRMLS_C](const std::string &prefix, ClassBase &c) {
         
         // forward to implementation class

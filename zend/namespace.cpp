@@ -27,7 +27,7 @@ Namespace &Namespace::add(const char *name, const native_callback_0 &function, c
     if (locked()) return *this;
 
     // add a function
-    _functions.push_back(std::make_shared<Function>(name, function, arguments, return_ref));
+    _functions.push_back(std::make_shared<NativeFunction>(name, function, arguments, return_ref));
     
     // allow chaining
     return *this;
@@ -47,7 +47,7 @@ Namespace &Namespace::add(const char *name, const native_callback_1 &function, c
     if (locked()) return *this;
 
     // add a function
-    _functions.push_back(std::make_shared<Function>(name, function, arguments, return_ref));
+    _functions.push_back(std::make_shared<NativeFunction>(name, function, arguments, return_ref));
 
     // allow chaining
     return *this;
@@ -67,7 +67,7 @@ Namespace &Namespace::add(const char *name, const native_callback_2 &function, c
     if (locked()) return *this;
 
     // add a function
-    _functions.push_back(std::make_shared<Function>(name, function, arguments, return_ref));
+    _functions.push_back(std::make_shared<NativeFunction>(name, function, arguments, return_ref));
 
     // allow chaining
     return *this;
@@ -87,7 +87,7 @@ Namespace &Namespace::add(const char *name, const native_callback_3 &function, c
     if (locked()) return *this;
 
     // add a function
-    _functions.push_back(std::make_shared<Function>(name, function, arguments, return_ref));
+    _functions.push_back(std::make_shared<NativeFunction>(name, function, arguments, return_ref));
 
     // allow chaining
     return *this;
@@ -101,13 +101,13 @@ Namespace &Namespace::add(const char *name, const native_callback_3 &function, c
  * 
  *  @param  callback
  */
-void Namespace::functions(const std::function<void(const std::string &ns, Function &func)> &callback)
+void Namespace::functions(const std::function<void(const std::string &ns, NativeFunction &func)> &callback)
 {
     // loop through the functions, and apply the callback
     for (auto &function : _functions) callback(_name, *function);
     
     // loop through the other namespaces
-    for (auto &ns : _namespaces) ns->functions([this, callback](const std::string &ns, Function &func) {
+    for (auto &ns : _namespaces) ns->functions([this, callback](const std::string &ns, NativeFunction &func) {
         
         // if this is the root namespace, we don't have to change the prefix
         if (_name.size() == 0) return callback(ns, func);
@@ -140,6 +140,31 @@ void Namespace::classes(const std::function<void(const std::string &ns, ClassBas
         // construct a new prefix
         // @todo this could be slightly inefficient
         return callback(_name + "\\" + ns, clss);
+    });
+}
+
+/**
+ *  Apply a callback to each registered constant
+ * 
+ *  The callback will be called with the name of the namespace, and
+ *  a reference to the registered constant
+ * 
+ *  @param  callback
+ */
+void Namespace::constants(const std::function<void(const std::string &ns, Constant &constant)> &callback)
+{
+    // loop through the constants, and apply the callback
+    for (auto &c : _constants) callback(_name, *c);
+    
+    // loop through the other namespaces
+    for (auto &ns : _namespaces) ns->constants([this, callback](const std::string &ns, Constant &constant) {
+        
+        // if this is the root namespace, we don't have to change the prefix
+        if (_name.size() == 0) return callback(ns, constant);
+        
+        // construct a new prefix
+        // @todo this could be slightly inefficient
+        return callback(_name + "\\" + ns, constant);
     });
 }
 

@@ -27,7 +27,7 @@ void Callable::invoke(INTERNAL_FUNCTION_PARAMETERS)
 {
     // find the function name
     const char *name = get_active_function_name(TSRMLS_C);
-    
+
     // uncover the hidden pointer inside the function name
     Callable *callable = HiddenPointer<Callable>(name);
 
@@ -52,13 +52,13 @@ void Callable::invoke(INTERNAL_FUNCTION_PARAMETERS)
             // get the result
             Value result(callable->invoke(params));
 
-            // detach the zval (we don't want it to be destructed)
-            zval *val = result.detach();
+            // we're ready if the return value is not even used
+            if (!return_value_used) return;
 
             // @todo php 5.6 has a RETVAL_ZVAL_FAST macro that can be used instead (and is faster)
 
             // return a full copy of the zval, and do not destruct it
-            RETVAL_ZVAL(val, 1, 0);
+            RETVAL_ZVAL(result._val, 1, 0);
         }
         catch (Exception &exception)
         {
@@ -107,20 +107,14 @@ void Callable::invoke_return_ref(INTERNAL_FUNCTION_PARAMETERS)
             // get the result
             Value result(callable->invoke(params));
 
-            // detach the zval (we don't want it to be destructed)
-            zval *val = result.detach();
-
-            // add one more reference
-            Z_ADDREF_P(val);
-
             // get the reference of the result
-            SEPARATE_ZVAL_TO_MAKE_IS_REF(&val);
+            SEPARATE_ZVAL_TO_MAKE_IS_REF(&result._val);
 
             // destroy the old return value
             zval_ptr_dtor(return_value_ptr);
 
             // return the reference
-            *return_value_ptr = val;
+            *return_value_ptr = result._val;
         }
         catch (Exception &exception)
         {
@@ -132,10 +126,10 @@ void Callable::invoke_return_ref(INTERNAL_FUNCTION_PARAMETERS)
 
 /**
  *  Fill a function entry
- * 
- *  This method is called when the extension is registering itself, when the 
+ *
+ *  This method is called when the extension is registering itself, when the
  *  function or method introces himself
- * 
+ *
  *  @param  entry       Entry to be filled
  *  @param  classname   Optional class name
  *  @param  flags       Is this a public property?
@@ -169,7 +163,7 @@ void Callable::initialize(zend_arg_info *info, const char *classname) const
     // up until php 5.3, the first info object is filled with alternative information,
     // later it is casted to a zend_internal_function object
     auto *finfo = (zend_internal_function_info *)info;
-    
+
     // fill in all the members.
     // Inside the name we hide a pointer to the current object
     finfo->_name = _ptr;
@@ -182,7 +176,7 @@ void Callable::initialize(zend_arg_info *info, const char *classname) const
 
     // we support return-by-reference
     finfo->return_reference = _return_ref;
- 
+
 # if PHP_VERSION_ID >= 50600
     // since php 5.6 there are _allow_null and _is_variadic properties. It's
     // not exactly clear what they do (@todo find this out) so for now we set
@@ -213,5 +207,3 @@ void Callable::initialize(zend_arg_info *info, const char *classname) const
  *  End of namespace
  */
 }
-
-

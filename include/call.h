@@ -18,34 +18,26 @@ namespace Php {
 extern bool  class_exists(const char *classname, size_t size, bool autoload = true);
 inline bool  class_exists(const char *classname, bool autoload = true) { return class_exists(classname, strlen(classname), autoload); }
 inline bool  class_exists(const std::string &classname, bool autoload = true) { return class_exists(classname.c_str(), classname.size(), autoload); }
+extern Value constant(const char *constant);
+extern Value constant(const char *constant, size_t size);
+extern Value constant(const std::string &constant);
+extern bool  define(const char *name, size_t size, const Value &value);
+extern bool  define(const char *name, const Value &value);
+extern bool  define(const std::string &name, const Value &value);
+extern bool  defined(const char *constant);
+extern bool  defined(const char *constant, size_t size);
+extern bool  defined(const std::string &constant);
 extern Value eval(const std::string &phpCode);
+extern Value include(const std::string &filename);
+extern Value include_once(const std::string &filename);
 inline bool  is_a(const Value &obj, const char *classname, size_t size, bool allow_string = false) { return obj.instanceOf(classname, size, allow_string); }
 inline bool  is_a(const Value &obj, const char *classname, bool allow_string = false) { return is_a(obj, classname, strlen(classname), allow_string); }
 inline bool  is_a(const Value &obj, const std::string &classname, bool allow_string = false) { return is_a(obj, classname.c_str(), classname.size(), allow_string); }
 inline bool  is_subclass_of(const Value &obj, const char *classname, size_t size, bool allow_string = true) { return obj.derivedFrom(classname, size, allow_string); }
 inline bool  is_subclass_of(const Value &obj, const char *classname, bool allow_string = true) { return is_subclass_of(obj, classname, strlen(classname), allow_string); }
 inline bool  is_subclass_of(const Value &obj, const std::string &classname, bool allow_string = true) { return is_subclass_of(obj, classname.c_str(), classname.size(), allow_string); }
-
-/**
- * Get the value of a constant
- *  @param  constant_name
- *  @return value
- */
-Php::Value constant(const std::string &constant_name);
-/**
- * Define a new constant
- *  @param  constant_name
- *  @param  value
- *  @param  case_insensitive
- *  @return bool
- */
-bool define(const std::string &constant_name, const Php::Value &value, bool case_insensitive = false);
-/**
- * Check whether a constant exists
- *  @param  constant_name
- *  @return bool
- */
-bool defined(const std::string &constant_name);
+extern Value require(const std::string &filename);
+extern Value require_once(const std::string &filename);
 
 /**
  *  Call a function in PHP
@@ -59,21 +51,21 @@ Value call(const char *name, Params&&... params)
     // the name can be turned into a Php::Value object, which implements
     // the operator () method to call it
     Value function(name);
-    
+
     // invoke the operator ()
     return function(std::forward<Params>(params)...);
 }
 
 /**
  *  Long list of simply-forwarded function calls
- * 
+ *
  *  Most functions in this list are forwarded to the call() method described
- *  above, which of course is slower than necessary, because they will have to 
+ *  above, which of course is slower than necessary, because they will have to
  *  pass the entire zend engine to look up the actual implementation, while a
- *  direct call the C implementation was possible too. The reason for this is 
+ *  direct call the C implementation was possible too. The reason for this is
  *  that we are lazy - if you feel like looking up the actual implementation for
  *  each function in the PHP source, your support is more than welcome.
- * 
+ *
  *  But since it is a stupid idea to call a PHP function from your extension
  *  anyway (that's what people write extension for: to get away from PHP and
  *  make the code run on the highway), it is not expected that these functions
@@ -129,4 +121,3 @@ inline Value isset(const HashMember<Value> &member) { return member.exists() && 
  *  End of namespace
  */
 }
-
