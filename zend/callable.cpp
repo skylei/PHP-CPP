@@ -108,7 +108,7 @@ void Callable::invoke_return_ref(INTERNAL_FUNCTION_PARAMETERS)
             Value result(callable->invoke(params));
 
             // add one more reference
-            Z_ADDREF_P(val);
+            Z_ADDREF_P(result._val);
 
             // get the reference of the result
             SEPARATE_ZVAL_TO_MAKE_IS_REF(&result._val);
