@@ -93,9 +93,10 @@ void ClassBase::method(const char *name, int flags, const Arguments &args, bool 
  *  @param  flags       Optional flags
  */
 void ClassBase::property(const char *name, std::nullptr_t value, int flags)     { _impl->property(name, value, flags); }
-void ClassBase::property(const char *name, int16_t value, int flags)            { _impl->property(name, value, flags); }
-void ClassBase::property(const char *name, int32_t value, int flags)            { _impl->property(name, value, flags); }
-void ClassBase::property(const char *name, int64_t value, int flags)            { _impl->property(name, value, flags); }
+void ClassBase::property(const char *name, short value, int flags)              { _impl->property(name, value, flags); }
+void ClassBase::property(const char *name, int value, int flags)                { _impl->property(name, value, flags); }
+void ClassBase::property(const char *name, long value, int flags)               { _impl->property(name, value, flags); }
+void ClassBase::property(const char *name, long long value, int flags)          { _impl->property(name, value, flags); }
 void ClassBase::property(const char *name, bool value, int flags)               { _impl->property(name, value, flags); }
 void ClassBase::property(const char *name, char value, int flags)               { _impl->property(name, value, flags); }
 void ClassBase::property(const char *name, const std::string &value, int flags) { _impl->property(name, value, flags); }
@@ -130,4 +131,3 @@ void ClassBase::extends(const ClassBase &base) { _impl->extends(base._impl); }
  *  End namespace
  */
 }
-

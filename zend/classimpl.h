@@ -37,7 +37,7 @@ private:
      */
     ClassType _type = ClassType::Regular;
 
-    /** 
+    /**
      *  The class entry
      *  @var    zend_class_entry
      */
@@ -48,19 +48,19 @@ private:
      *  @var    zend_function_entry[]
      */
     zend_function_entry *_entries = nullptr;
-    
+
     /**
      *  All class methods
      *  @var    std::list
      */
     std::list<std::shared_ptr<Method>> _methods;
-    
+
     /**
      *  All class members (class properties)
      *  @var    std::list
      */
     std::list<std::shared_ptr<Member>> _members;
-    
+
     /**
      *  Map of dynamically accessible properties
      *  @var    std::map
@@ -72,19 +72,19 @@ private:
      *  @var    std::list
      */
     std::list<std::shared_ptr<ClassImpl>> _interfaces;
-    
+
     /**
      *  The parent/base class
      *  @var    std::shared_ptr
      */
     std::shared_ptr<ClassImpl> _parent;
-    
+
     /**
      *  The object handlers for instances of this class
      *  @var    zend_object_handlers
      */
     zend_object_handlers _handlers;
-    
+
     /**
      *  Are the handlers already initialized?
      *  @var    bool
@@ -93,10 +93,10 @@ private:
 
 
     /**
-     *  Retrieve an array of zend_function_entry objects that hold the 
+     *  Retrieve an array of zend_function_entry objects that hold the
      *  properties for each method. This method is called at extension
      *  startup time to register all methods.
-     * 
+     *
      *  @param  classname       The class name
      *  @return zend_function_entry[]
      */
@@ -150,16 +150,16 @@ public:
 
     /**
      *  Initialize the class, given its name
-     * 
+     *
      *  The module functions are registered on module startup, but classes are
      *  initialized afterwards. The Zend engine is a strange thing. Nevertheless,
      *  this means that this method is called after the module is already available.
      *  This function will inform the Zend engine about the existence of the
      *  class.
-     * 
-     *  @param  base        The extension C++ class 
+     *
+     *  @param  base        The extension C++ class
      *  @param  ns          Namespace name
-     *  @param  tsrm_ls     
+     *  @param  tsrm_ls
      *  @return zend_class_entry
      */
     struct _zend_class_entry *initialize(ClassBase *base, const std::string &ns TSRMLS_DC);
@@ -190,7 +190,7 @@ public:
 
     /**
      *  Function that is used to count the number of elements in the object
-     *  If the user has implemented the Countable interface, this method will 
+     *  If the user has implemented the Countable interface, this method will
      *  call the count() method
      *  @param  val
      *  @param  count
@@ -225,7 +225,7 @@ public:
      *  @return zend_object_handlers
      */
     static zend_object_handlers *objectHandlers(zend_class_entry *entry);
-    
+
     /**
      *  Function to create a new iterator to iterate over an object
      *  @param  entry                   The class entry
@@ -245,7 +245,7 @@ public:
      *  @param  tsrm_ls
      *  @return zval
      */
-#if PHP_VERSION_ID >= 50400    
+#if PHP_VERSION_ID >= 50400
     static zval *readProperty(zval *object, zval *name, int type, const zend_literal *key TSRMLS_DC);
 #else
     static zval *readProperty(zval *object, zval *name, int type TSRMLS_DC);
@@ -260,7 +260,7 @@ public:
      *  @param  tsrm_ls
      *  @return zval
      */
-#if PHP_VERSION_ID >= 50400    
+#if PHP_VERSION_ID >= 50400
     static void writeProperty(zval *object, zval *name, zval *value, const zend_literal *key TSRMLS_DC);
 #else
     static void writeProperty(zval *object, zval *name, zval *value TSRMLS_DC);
@@ -274,7 +274,7 @@ public:
      *  @param  tsrm_ls
      *  @return bool
      */
-#if PHP_VERSION_ID >= 50400    
+#if PHP_VERSION_ID >= 50400
     static int hasProperty(zval *object, zval *name, int has_set_exists, const zend_literal *key TSRMLS_DC);
 #else
     static int hasProperty(zval *object, zval *name, int has_set_exists TSRMLS_DC);
@@ -286,7 +286,7 @@ public:
      *  @param  member          The member to remove
      *  @param  tsrm_ls
      */
-#if PHP_VERSION_ID >= 50400    
+#if PHP_VERSION_ID >= 50400
     static void unsetProperty(zval *object, zval *member, const zend_literal *key TSRMLS_DC);
 #else
     static void unsetProperty(zval *object, zval *member TSRMLS_DC);
@@ -301,7 +301,7 @@ public:
      *  @param  tsrm_ls
      *  @return zend_function
      */
-#if PHP_VERSION_ID >= 50400    
+#if PHP_VERSION_ID >= 50400
     static zend_function *getMethod(zval **object_ptr, char *method, int method_len, const zend_literal *key TSRMLS_DC);
 #else
     static zend_function *getMethod(zval **object_ptr, char *method, int method_len TSRMLS_DC);
@@ -360,17 +360,17 @@ public:
      */
     static int serialize(zval *object, unsigned char **buffer, unsigned int *buf_len, zend_serialize_data *data TSRMLS_DC);
     static int unserialize(zval **object, zend_class_entry *entry, const unsigned char *buffer, unsigned int buf_len, zend_unserialize_data *data TSRMLS_DC);
-    
+
     /**
      *  Add a method to the class
-     *  zend_serialize_data     
+     *  zend_serialize_data
      *  The method will be accessible as one of the class methods in your PHP
      *  code. When the method is called, it will automatically be forwarded
      *  to the C++ implementation. The flags can be Php::Public, Php::Protected
      *  or Php::Private (using private methods can be useful if you for example
      *  want to make the __construct() function private). The access-modified
      *  flag can be bitwise combined with the flag Php::Final or Php::Abstract).
-     * 
+     *
      *  @param  name        Name of the method
      *  @param  method      The actual method
      *  @param  flags       Optional flags
@@ -388,11 +388,11 @@ public:
 
     /**
      *  Add a static method to the class
-     * 
+     *
      *  Because a C++ static method is just a regular function, that happens to
      *  have access to the private variables of the class at compile time, you
      *  can register any function that matches one of the function signatures
-     *  
+     *
      *  @param  name        Name of the method
      *  @param  method      The actual method
      *  @param  flags       Optional flags
@@ -406,7 +406,7 @@ public:
 
     /**
      *  Add an abstract method to the class
-     * 
+     *
      *  @param  name        Name of the method
      *  @param  flags       Optional flags (like public or protected)
      *  @param  args        Description of the supported arguments
@@ -416,21 +416,22 @@ public:
 
     /**
      *  Add a property to the class
-     * 
+     *
      *  Every instance of this class will have this property. The property
      *  can be Php::Public, Php::Protected or Php::Private (altough setting
      *  private properties is odd as the implementation of the class is in CPP,
      *  so why use private properties while the whole implementation is already
      *  hidden)
-     * 
+     *
      *  @param  name        Name of the property
      *  @param  value       Actual property value
      *  @param  flags       Optional flags
      */
     void property(const char *name, std::nullptr_t value, int flags = Php::Public)      { _members.push_back(std::make_shared<NullMember>   (name,                        flags & PropertyModifiers)); }
-    void property(const char *name, int16_t value, int flags = Php::Public)             { _members.push_back(std::make_shared<NumericMember>(name,  value,                flags & PropertyModifiers)); }
-    void property(const char *name, int32_t value, int flags = Php::Public)             { _members.push_back(std::make_shared<NumericMember>(name,  value,                flags & PropertyModifiers)); }
-    void property(const char *name, int64_t value, int flags = Php::Public)             { _members.push_back(std::make_shared<NumericMember>(name,  value,                flags & PropertyModifiers)); }
+    void property(const char *name, short value, int flags = Php::Public)               { _members.push_back(std::make_shared<NumericMember>(name,  value,                flags & PropertyModifiers)); }
+    void property(const char *name, int value, int flags = Php::Public)                 { _members.push_back(std::make_shared<NumericMember>(name,  value,                flags & PropertyModifiers)); }
+    void property(const char *name, long value, int flags = Php::Public)                { _members.push_back(std::make_shared<NumericMember>(name,  value,                flags & PropertyModifiers)); }
+    void property(const char *name, long long value, int flags = Php::Public)           { _members.push_back(std::make_shared<NumericMember>(name,  value,                flags & PropertyModifiers)); }
     void property(const char *name, bool value, int flags = Php::Public)                { _members.push_back(std::make_shared<BoolMember>   (name,  value,                flags & PropertyModifiers)); }
     void property(const char *name, char value, int flags = Php::Public)                { _members.push_back(std::make_shared<StringMember> (name, &value,             1, flags & PropertyModifiers)); }
     void property(const char *name, const std::string &value, int flags = Php::Public)  { _members.push_back(std::make_shared<StringMember> (name,  value,                flags & PropertyModifiers)); }
@@ -449,7 +450,7 @@ public:
     void property(const char *name, const getter_callback_1 &getter, const setter_callback_0 &setter)   { _properties[name] = std::make_shared<Property>(getter,setter); }
     void property(const char *name, const getter_callback_0 &getter, const setter_callback_1 &setter)   { _properties[name] = std::make_shared<Property>(getter,setter); }
     void property(const char *name, const getter_callback_1 &getter, const setter_callback_1 &setter)   { _properties[name] = std::make_shared<Property>(getter,setter); }
-    
+
     /**
      *  Add an interface that is implemented
      *  @param  interface   The interface that is implemented
@@ -468,4 +469,3 @@ public:
  *  End namespace
  */
 }
-
