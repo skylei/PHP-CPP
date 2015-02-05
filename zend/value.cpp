@@ -124,10 +124,10 @@ Value::Value(const std::string &value)
  */
 Value::Value(const char *value, int size)
 {
-    // allocate the zval
+	// allocate the zval
     MAKE_STD_ZVAL(_val);
-    
-    // do we have a valid value?
+
+    // is there a value?
     if (value)
     {
         // create a string zval
@@ -156,11 +156,8 @@ Value::Value(double value)
  *  @param  zval        Value to wrap
  *  @param  ref         Force this to be a reference
  */
-Value::Value(struct _zval_struct *val, bool ref)
+Value::Value(struct _zval_struct *val, bool ref) : _val(val)
 {
-    // just copy the zval into this object
-    _val = val;
-    
     // if the variable is not already a reference, and it has more than one
     // variable pointing to it, we should seperate it so that any changes
     // we're going to make will not change the other variable
@@ -169,13 +166,13 @@ Value::Value(struct _zval_struct *val, bool ref)
         // separate the zval
         SEPARATE_ZVAL_IF_NOT_REF(&_val);
     }
-    
+
     // we see ourselves as reference too
     Z_ADDREF_P(_val);
-    
+
     // we're ready if we do not have to force it as a reference
     if (!ref || Z_ISREF_P(_val)) return;
-    
+
     // make this a reference
     Z_SET_ISREF_P(_val);
 }
@@ -188,7 +185,9 @@ Value::Value(const Base *object)
 {
     // there are two options: the object was constructed from user space,
     // and is already linked to a handle, or it was constructed from C++ 
-    // space, and no handle does yet exist, find the implementation object
+    // space, and no handle does yet exist. But if it was constructed from
+    // C++ space and not yet wrapped, this Value constructor should not be 
+    // called directly, but first via the derived Php::Object class. 
     auto *impl = object->implementation();
     
     // do we have a handle?
@@ -205,14 +204,14 @@ Value::Value(const Base *object)
     // we have to lookup the object in the object-table
     zend_object_store_bucket *obj_bucket = &EG(objects_store).object_buckets[impl->handle()];
     
+    // there is one more reference to the object
+    obj_bucket->bucket.obj.refcount += 1;
+    
     // this is copy-pasted from zend_objects.c - and it is necessary too!
     if (!obj_bucket->bucket.obj.handlers) obj_bucket->bucket.obj.handlers = &std_object_handlers;
     
     // store the handlers in the zval too (cast is necessary for php 5.3)
     Z_OBJ_HT_P(_val) = (zend_object_handlers*)obj_bucket->bucket.obj.handlers;
-    
-    // run the copy constructor
-    zval_copy_ctor(_val);
 }
 
 /**
@@ -286,7 +285,7 @@ Value::Value(const Value &that)
  *  Move constructor
  *  @param  value
  */
-Value::Value(Value &&that) : _val(that._val)
+Value::Value(Value &&that)  _NOEXCEPT: _val(that._val)
 {
     // clear the other object
     that._val = nullptr;
@@ -387,7 +386,7 @@ void Value::attach(struct _hashtable *hashtable)
  *  Retrieve the refcount
  *  @return int
  */
-int Value::refcount()
+int Value::refcount() const
 {
     return Z_REFCOUNT_P(_val);
 }
@@ -397,7 +396,7 @@ int Value::refcount()
  *  @param  value
  *  @return Value
  */
-Value &Value::operator=(Value &&value)
+Value &Value::operator=(Value &&value) _NOEXCEPT
 {
     // skip self assignment
     if (this == &value) return *this;
@@ -854,191 +853,6 @@ Value Value::operator()() const
 }
 
 /**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @return Value
- */
-Value Value::operator()(Value p0) const
-{
-    // array of parameters
-    zval **params[1] = { &p0._val };
-
-    // call the function
-    return exec(1, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1) const
-{
-    // array of parameters
-    zval **params[2] = { &p0._val, &p1._val };
-
-    // call the function
-    return exec(2, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2) const
-{
-    // array of parameters
-    zval **params[3] = { &p0._val, &p1._val, &p2._val };
-
-    // call the function
-    return exec(3, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2, Value p3) const
-{
-    // array of parameters
-    zval **params[4] = { &p0._val, &p1._val, &p2._val, &p3._val };
-
-    // call the function
-    return exec(4, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2, Value p3, Value p4) const
-{
-    // array of parameters
-    zval **params[5] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val };
-
-    // call the function
-    return exec(5, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2, Value p3, Value p4, Value p5) const
-{
-    // array of parameters
-    zval **params[6] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val };
-
-    // call the function
-    return exec(6, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6) const
-{
-    // array of parameters
-    zval **params[7] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val };
-
-    // call the function
-    return exec(7, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @param  p7          The eighth parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6, Value p7) const
-{
-    // array of parameters
-    zval **params[8] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val, &p7._val };
-
-    // call the function
-    return exec(8, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @param  p7          The eighth parameter
- *  @param  p8          The ninth parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6, Value p7, Value p8) const
-{
-    // array of parameters
-    zval **params[9] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val, &p7._val, &p8._val };
-
-    // call the function
-    return exec(9, params);
-}
-
-/**
- *  Call the function - if the variable holds a callable thing
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @param  p7          The eighth parameter
- *  @param  p8          The ninth parameter
- *  @param  p9          The tenth parameter
- *  @return Value
- */
-Value Value::operator()(Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6, Value p7, Value p8, Value p9) const
-{
-    // array of parameters
-    zval **params[10] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val, &p7._val, &p8._val, &p9._val };
-
-    // call the function
-    return exec(10, params);
-}
-
-/**
  *  Call the method - if the variable holds an object with the given method
  *  @param  name        name of the method to call
  *  @return Value
@@ -1047,201 +861,6 @@ Value Value::call(const char *name)
 {
     // call with zero parameters
     return exec(name, 0, NULL);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0)
-{
-    // array of parameters
-    zval **params[] = { &p0._val };
-
-    // call with zero parameters
-    return exec(name, 1, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val };
-
-    // call with zero parameters
-    return exec(name, 2, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val };
-
-    // call with zero parameters
-    return exec(name, 3, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2, Value p3)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val, &p3._val };
-
-    // call with zero parameters
-    return exec(name, 4, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2, Value p3, Value p4)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val };
-
-    // call with zero parameters
-    return exec(name, 5, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2, Value p3, Value p4, Value p5)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val };
-
-    // call with zero parameters
-    return exec(name, 6, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val };
-
-    // call with zero parameters
-    return exec(name, 7, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @param  p7          The eighth parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6, Value p7)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val, &p7._val };
-
-    // call with zero parameters
-    return exec(name, 8, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @param  p7          The eighth parameter
- *  @param  p8          The ninth parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6, Value p7, Value p8)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val, &p7._val, &p8._val };
-
-    // call with zero parameters
-    return exec(name, 9, params);
-}
-
-/**
- *  Call the method - if the variable holds an object with the given method
- *  @param  name        name of the method to call
- *  @param  p0          The first parameter
- *  @param  p1          The second parameter
- *  @param  p2          The third parameter
- *  @param  p3          The fourth parameter
- *  @param  p4          The fifth parameter
- *  @param  p5          The sixth parameter
- *  @param  p6          The seventh parameter
- *  @param  p7          The eighth parameter
- *  @param  p8          The ninth parameter
- *  @param  p9          The tenth parameter
- *  @return Value
- */
-Value Value::call(const char *name, Value p0, Value p1, Value p2, Value p3, Value p4, Value p5, Value p6, Value p7, Value p8, Value p9)
-{
-    // array of parameters
-    zval **params[] = { &p0._val, &p1._val, &p2._val, &p3._val, &p4._val, &p5._val, &p6._val, &p7._val, &p8._val, &p9._val };
-
-    // call with zero parameters
-    return exec(name, 10, params);
 }
 
 /**
@@ -1445,10 +1064,10 @@ zend_class_entry *Value::classEntry(bool allowString) const
 
 /**
  *  Check whether this object is an instance of a certain class
- * 
+ *
  *  If you set the parameter 'allowString' to true, and the Value object
  *  holds a string, the string will be treated as class name.
- * 
+ *
  *  @param  classname   The class of which this should be an instance
  *  @param  size        Length of the classname string
  *  @param  allowString Is it allowed for 'this' to be a string
@@ -1462,23 +1081,29 @@ bool Value::instanceOf(const char *classname, size_t size, bool allowString) con
     // the class-entry of 'this'
     zend_class_entry *this_ce = classEntry(allowString);
     if (!this_ce) return false;
-    
+
     // class entry of the parameter
     zend_class_entry **ce;
-    
+
     // now we can look up the actual class
+    // the signature of zend_lookup_class_ex is slightly different since 5.4
+    // TODO The signature of this changed once again as of 5.6!
+#if PHP_VERSION_ID >= 50400
     if (zend_lookup_class_ex(classname, size, NULL, 0, &ce TSRMLS_CC) == FAILURE) return false;
-    
+#else
+    if (zend_lookup_class_ex(classname, size, 0, &ce TSRMLS_CC) == FAILURE) return false;
+#endif
+
     // check if this is a subclass
     return instanceof_function(this_ce, *ce TSRMLS_CC);
 }
 
 /**
  *  Check whether this object is derived from a certain class
- * 
+ *
  *  If you set the parameter 'allowString' to true, and the Value object
  *  holds a string, the string will be treated as class name.
- * 
+ *
  *  @param  classname   The class of which this should be an instance
  *  @param  size        Length of the classname string
  *  @param  allowString Is it allowed for 'this' to be a string
@@ -1492,16 +1117,22 @@ bool Value::derivedFrom(const char *classname, size_t size, bool allowString) co
     // the class-entry of 'this'
     zend_class_entry *this_ce = classEntry(allowString);
     if (!this_ce) return false;
-    
+
     // class entry of the parameter
     zend_class_entry **ce;
-    
+
     // now we can look up the actual class
+    // the signature of zend_lookup_class_ex is slightly different since 5.4
+    // TODO The signature of this changed once again as of 5.6!
+#if PHP_VERSION_ID >= 50400
     if (zend_lookup_class_ex(classname, size, NULL, 0, &ce TSRMLS_CC) == FAILURE) return false;
-    
+#else
+    if (zend_lookup_class_ex(classname, size, 0, &ce TSRMLS_CC) == FAILURE) return false;
+#endif
+
     // should not be identical, it must be a real derived object
     if (this_ce == *ce) return false;
-    
+
     // check if this is a subclass
     return instanceof_function(this_ce, *ce TSRMLS_CC);
 }
@@ -1514,18 +1145,24 @@ Value Value::clone() const
 {
     // the zval that will hold the copy
     zval *copy;
-    
+
     // allocate memory
     ALLOC_ZVAL(copy);
-    
+
     // copy the data
     INIT_PZVAL_COPY(copy, _val);
-    
+
     // run the copy constructor to ensure that everything gets copied
     zval_copy_ctor(copy);
-    
+
+    // wrap it using the Value(zval*) constructor, this will +1 the refcount!!!!
+    Value output(copy);
+
+    // -1 the refcount to avoid future leaks
+    Z_DELREF_P(copy);
+
     // done
-    return Value(copy);
+    return output;
 }
 
 /**
@@ -1726,7 +1363,7 @@ ValueIterator Value::createIterator(bool begin) const
     // check type
     if (isArray()) return ValueIterator(new HashIterator(Z_ARRVAL_P(_val), begin, true));
     
-    // get access to the hast table
+    // get access to the hash table
     if (isObject()) 
     {
         // we need the TSRMLS_CC variable
@@ -1771,6 +1408,20 @@ ValueIterator Value::begin() const
 ValueIterator Value::end() const
 {
     return createIterator(false);
+}
+
+/**
+ *  Iterate over key value pairs
+ *  @param  callback
+ */
+void Value::iterate(const std::function<void(const Php::Value &,const Php::Value &)> &callback) const
+{
+    // iterate over the object
+    for (const auto &iter : *this)
+    {
+        // call the callback
+        callback(iter.first, iter.second);
+    }
 }
 
 /**
@@ -1859,7 +1510,7 @@ Value Value::get(int index) const
  */
 Value Value::get(const char *key, int size) const
 {
-    // must be an array
+    // must be an array or object
     if (!isArray() && !isObject()) return Value();
 
     // calculate size
@@ -1879,6 +1530,9 @@ Value Value::get(const char *key, int size) const
     }
     else
     {
+        // key should not start with a null byte
+        if (size > 0 && key[0] == 0) return Value();
+        
         // we need the tsrm_ls variable
         TSRMLS_FETCH();
         
@@ -1945,6 +1599,9 @@ void Value::set(int index, const Value &value)
  */
 void Value::setRaw(const char *key, int size, const Value &value)
 {
+    // does not work for empty keys
+    if (!key || (size > 0 && key[0] == 0)) return;
+    
     // is this an object?
     if (isObject())
     {
@@ -1956,7 +1613,7 @@ void Value::setRaw(const char *key, int size, const Value &value)
 
         // retrieve the class entry
         auto *entry = zend_get_class_entry(_val TSRMLS_CC);
-
+        
         // update the property (cast necessary for php 5.3)
         zend_update_property(entry, _val, (char *)key, size, value._val TSRMLS_CC);
     }
@@ -2040,7 +1697,7 @@ void Value::unset(const char *key, int size)
         SEPARATE_ZVAL_IF_NOT_REF(&_val);
 
         // remove the index
-        zend_hash_del(Z_ARRVAL_P(_val), key, size);
+        zend_hash_del(Z_ARRVAL_P(_val), key, size + 1);
     }
 }
 

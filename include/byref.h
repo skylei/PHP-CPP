@@ -24,8 +24,8 @@ public:
      *  @param  type        Argument type
      *  @param  required    Is this argument required?
      */
-    ByRef(const char *name, Type type, bool required = true) : Argument(name, type, required, true) {}
-    
+    ByRef(const char *name, Type type = Type::Null, bool required = true) : Argument(name, type, required, true) {}
+
     /**
      *  Constructor
      *  @param  name        Name of the argument
@@ -34,7 +34,7 @@ public:
      *  @param  required    Is this argument required?
      */
     ByRef(const char *name, const char *classname, bool nullable = false, bool required = true) : Argument(name, classname, nullable, required, true) {}
-    
+
     /**
      *  Copy constructor
      *  @param  argument
@@ -45,8 +45,8 @@ public:
      *  Move constructor
      *  @param  argument
      */
-    ByRef(ByRef &&argument) : Argument(argument) {}
-    
+    ByRef(ByRef &&argument) _NOEXCEPT : Argument(argument) {}
+
     /**
      *  Destructor
      */
