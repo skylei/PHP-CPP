@@ -47,6 +47,7 @@
  *  Include other files from this library
  */
 #include "../include/noexcept.h"
+#include "../include/platform.h"
 #include "../include/version.h"
 #include "../include/inivalue.h"
 #include "../include/ini.h"
@@ -124,6 +125,7 @@
 #include "opcodes.h"
 #include "functor.h"
 #include "constantimpl.h"
+#include "delayedfree.h"
 
 #ifndef ZVAL_COPY_VALUE
 #define ZVAL_COPY_VALUE(z, v)  \

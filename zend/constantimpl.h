@@ -127,8 +127,9 @@ public:
             break;
         
         case IS_LONG:
-            // set a long constant
-            clss.property(_name, Z_LVAL(_constant.value), Php::Const);
+            // set a long constant (cast is necessary because php uses longs, which
+            // have a different size on different platforms)
+            clss.property(_name, (int64_t)Z_LVAL(_constant.value), Php::Const);
             break;
         
         case IS_DOUBLE:
